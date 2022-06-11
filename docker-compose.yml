@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  postgres:
+    container_name: postgres
+    restart: always
+    image: postgres:14.2-alpine
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ctf
+      POSTGRES_USER: postgres
+    volumes:
+      - ./database:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
+    networks:
+      - custom-net
+
+  frontend:
+    container_name: frontend
+    build:
+      context: frontend
+      dockerfile: Dockerfile
+    volumes:
+      - './frontend:/app'
+      - '/app/node_modules'
+    ports:
+      - '8080:8080'
+    stdin_open: true
+    tty: true
+    environment: 
+      - CHOKIDAR_USEPOLLING=true
+    depends_on:
+      - backend
+    networks:
+      - custom-net
+
+  backend:
+    container_name: backend
+    build:
+      context: backend
+      dockerfile: Dockerfile
+    env_file:
+      - './backend/.env'
+    volumes:
+      - './backend/src:/backend/src'
+      - './backend/uploads:/backend/uploads'
+      - '//var/run/docker.sock:/var/run/docker.sock'
+    ports:
+      - '3000:3000'
+    depends_on:
+      - postgres
+    networks:
+      - custom-net
+  pgadmin:
+    container_name: pgadmin4_container
+    image: dpage/pgadmin4
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: secret
+      PGADMIN_LISTEN_PORT: 9000
+    ports:
+      - "9000:9000"
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    networks:
+      - custom-net
+
+networks:
+  custom-net:
+
+volumes:
+  pgadmin-data:
